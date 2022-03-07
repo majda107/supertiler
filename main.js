@@ -4,6 +4,7 @@ import VTpbf from 'vt-pbf';
 import { gzip } from 'node-gzip';
 import { performance } from 'perf_hooks';
 import fs from 'fs';
+import { filterPoints } from './geometry-filter';
 
 const defaultOptions = {
     // For Supercluster
@@ -24,7 +25,8 @@ const defaultOptions = {
     center: '0,0,0',
     tileSpecVersion: 2,
 
-    layer: "geojsonLayer"
+    layer: "geojsonLayer",
+    filterPoints: false
 };
 
 function extend(dest, src) {
@@ -34,6 +36,12 @@ function extend(dest, src) {
 
 export default function (options) {
     options = extend(Object.create(defaultOptions), options);
+
+    let featureCollection = JSON.parse(fs.readFileSync(options.input));
+    if (options.filterPoints) {
+        featureCollection = filterPoints(featureCollection);
+    }
+
     const clustered = new Supercluster({
         minZoom: options.minZoom,
         maxZoom: options.maxZoom,
@@ -42,7 +50,7 @@ export default function (options) {
         nodeSize: options.nodeSize,
         map: options.map,
         reduce: options.reduce
-    }).load(JSON.parse(fs.readFileSync(options.input)).features);
+    }).load(featureCollection.features);
 
     if (options.logPerformance) {
         console.log(`Finished clustering at ${performance.now()}`);

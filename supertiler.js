@@ -50,8 +50,10 @@ const argv = Yargs.usage('Usage: $0 [options]')
     .describe('logPerformance', 'Output performance timing logs to console.')
     .boolean('logPerformance')
     .epilogue('Generation will fail if any tile goes over maximum size of 500KB. In this case, try increasing cluster radius, increasing max zoom, or generating fewer aggregated properties.')
-    .describe('layer', 'Provide custom mbtiles layer')
+    .describe('layer', 'Provide custom mbtiles layer as a string')
     .string('layer').nargs('layer', 1)
+    .describe('filterPoints', 'A boolean that states if only "point" geojson features should be processed')
+    .boolean('filterPoints')
     .argv;
 
 if (argv.map) {
