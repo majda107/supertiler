@@ -50,6 +50,8 @@ const argv = Yargs.usage('Usage: $0 [options]')
     .describe('logPerformance', 'Output performance timing logs to console.')
     .boolean('logPerformance')
     .epilogue('Generation will fail if any tile goes over maximum size of 500KB. In this case, try increasing cluster radius, increasing max zoom, or generating fewer aggregated properties.')
+    .describe('layer', 'Provide custom mbtiles layer')
+    .string('layer').nargs('layer', 1)
     .argv;
 
 if (argv.map) {

@@ -1,8 +1,8 @@
 import Supercluster from 'supercluster';
 import Sqlite from 'sqlite';
 import VTpbf from 'vt-pbf';
-import {gzip} from 'node-gzip';
-import {performance} from 'perf_hooks';
+import { gzip } from 'node-gzip';
+import { performance } from 'perf_hooks';
 import fs from 'fs';
 
 const defaultOptions = {
@@ -22,7 +22,9 @@ const defaultOptions = {
     // For mbtiles
     bounds: '-180.0,-85,180,85',
     center: '0,0,0',
-    tileSpecVersion: 2
+    tileSpecVersion: 2,
+
+    layer: "geojsonLayer"
 };
 
 function extend(dest, src) {
@@ -50,7 +52,7 @@ export default function (options) {
         fs.unlinkSync(options.output);
     }
     const filter = options.filter;
-    return Sqlite.open(options.output, {Promise}).then(db => Promise.all([
+    return Sqlite.open(options.output, { Promise }).then(db => Promise.all([
         db.run('CREATE TABLE metadata (name text, value text)'),
         db.run('CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob)')
     ]).then(() => {
@@ -76,6 +78,12 @@ export default function (options) {
         // Insert tiles
         for (let z = options.minZoom; z <= options.maxZoom + (options.includeUnclustered ? 1 : 0); z++) {
             const zoomDimension = Math.pow(2, z);
+
+            if (options.logPerformance) {
+                console.log("PROCESSING ZOOM DIMENSION", zoomDimension, `${z} from ${options.maxZoom + (options.includeUnclustered ? 1 : 0) - 1}`);
+            }
+
+
             // TODO: No need to process tiles outside of bounds
             // TODO: Stop zoom descent for tiles that don't have any clusters
             for (let x = 0; x < zoomDimension; x++) {
@@ -109,9 +117,12 @@ export default function (options) {
                         }
                     }
 
+                    const layerObject = {};
+                    layerObject[options.layer] = tile;
+
                     // Convert to PBF and compress before insertion
                     compressedTiles.push(
-                        gzip(VTpbf.fromGeojsonVt({'geojsonLayer': tile}, {version: options.tileSpecVersion, extent: options.extent})).then((compressed) => {
+                        gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent })).then((compressed) => {
                             if (compressed.length > 500000) {
                                 return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
                             }
@@ -130,7 +141,7 @@ export default function (options) {
         const vectorJson = {
             'vector_layers':
                 [{
-                    'id': 'geojsonLayer',
+                    'id': options.layer,
                     'description': 'Point layer imported from GeoJSON.',
                     fields
                 }]
