@@ -25,7 +25,8 @@ const defaultOptions = {
     tileSpecVersion: 2,
 
     layer: "geojsonLayer",
-    inputGeometryFilter: (g) => g
+    inputGeometryFilter: (g) => g,
+    geometryMapper: undefined
 };
 
 function extend(dest, src) {
@@ -123,6 +124,13 @@ export default function (options) {
 
                     const layerObject = {};
                     layerObject[options.layer] = tile;
+
+                    if (options.geometryMapper) {
+                        const cleanFeatures = tile.features.filter(f => !f.tags.cluster);
+                        const mappedFeatures = options.geometryMapper(cleanFeatures);
+
+                        tile.features.push(...mappedFeatures);
+                    }
 
                     // Convert to PBF and compress before insertion
                     compressedTiles.push(
