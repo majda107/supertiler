@@ -6,8 +6,7 @@
   "scripts": {
     "pretest": "eslint index.js main.js supertiler.js test/test.js",
     "test": "tap --node-arg=-r --node-arg=esm test",
-    "cov": "tap  --node-arg=-r --node-arg=esm test --cov",
-    "prepublishOnly": "npm run test"
+    "cov": "tap  --node-arg=-r --node-arg=esm test --cov"
   },
   "bin": {
     "supertiler": "supertiler.js"
