@@ -127,7 +127,7 @@ export default function (options) {
 
                     if (options.geometryMapper) {
                         const cleanFeatures = tile.features.filter(f => !f.tags.cluster);
-                        const mappedFeatures = options.geometryMapper(cleanFeatures);
+                        const mappedFeatures = options.geometryMapper(cleanFeatures, featureCollection.features);
 
                         tile.features.push(...mappedFeatures);
                     }
