@@ -26,7 +26,9 @@ const defaultOptions = {
 
     layer: "geojsonLayer",
     inputGeometryFilter: (g) => g,
-    geometryMapper: undefined
+    geometryMapper: undefined,
+
+    minPoints: 2
 };
 
 function extend(dest, src) {
@@ -46,7 +48,8 @@ export default function (options) {
         extent: options.extent,
         nodeSize: options.nodeSize,
         map: options.map,
-        reduce: options.reduce
+        reduce: options.reduce,
+        minPoints: options.minPoints
     }).load(featureCollection.features.filter(options.inputGeometryFilter));
 
     if (options.logPerformance) {
@@ -136,7 +139,8 @@ export default function (options) {
                     compressedTiles.push(
                         gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent })).then((compressed) => {
                             if (compressed.length > 500000) {
-                                return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
+                                // return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
+                                console.log(`Warning, compressed length exceeded 500000! (${compressed.length})`);
                             }
                             statements.push(
                                 db.run(
