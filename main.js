@@ -1,9 +1,46 @@
+import readline from "readline";
+import events from "events";
+
 import Supercluster from 'supercluster';
 import Sqlite from 'sqlite';
 import VTpbf from 'vt-pbf';
 import { gzip } from 'node-gzip';
 import { performance } from 'perf_hooks';
 import fs from 'fs';
+
+
+let featureCollection = {
+    type: 'FeatureCollection',
+    features: []
+};
+
+async function readInput(options) {
+    const rl = readline.createInterface({
+        input: fs.createReadStream(options.input),
+        crlfDelay: Infinity
+    });
+
+    let foundFeatures = false;
+    rl.on('line', line => {
+
+        if (foundFeatures) {
+            try {
+                if (line.endsWith(',')) line = line.slice(0, -1);
+
+                const feature = JSON.parse(line);
+                featureCollection.features.push(feature);
+            } catch { }
+        }
+
+        if (line.includes("features")) {
+            foundFeatures = true;
+        }
+    });
+
+    await events.once(rl, 'close');
+}
+
+
 
 const defaultOptions = {
     // For Supercluster
@@ -28,7 +65,9 @@ const defaultOptions = {
     inputGeometryFilter: (g) => g,
     geometryMapper: undefined,
 
-    minPoints: 2
+    minPoints: 2,
+
+    readByLine: false
 };
 
 function extend(dest, src) {
@@ -39,7 +78,12 @@ function extend(dest, src) {
 export default function (options) {
     options = extend(Object.create(defaultOptions), options);
 
-    const featureCollection = JSON.parse(fs.readFileSync(options.input));
+    if (options.readByLine) {
+        await readInput(options);
+    } else {
+        const featureCollection = JSON.parse(fs.readFileSync(options.input));
+    }
+
 
     const clustered = new Supercluster({
         minZoom: options.minZoom,
