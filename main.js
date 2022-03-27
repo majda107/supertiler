@@ -81,7 +81,7 @@ export default function (options) {
     if (options.readByLine) {
         await readInput(options);
     } else {
-        const featureCollection = JSON.parse(fs.readFileSync(options.input));
+        featureCollection = JSON.parse(fs.readFileSync(options.input));
     }
 
 

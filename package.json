@@ -1,6 +1,6 @@
 {
   "name": "supertiler-next",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GeoJSON -> MBTiles with Supercluster",
   "module": "index.js",
   "scripts": {
