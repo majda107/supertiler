@@ -75,7 +75,7 @@ function extend(dest, src) {
     return dest;
 }
 
-export default function (options) {
+export default async function (options) {
     options = extend(Object.create(defaultOptions), options);
 
     if (options.readByLine) {
