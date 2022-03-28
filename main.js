@@ -179,6 +179,10 @@ export default async function (options) {
                         tile.features.push(...mappedFeatures);
                     }
 
+                    if (options.log) {
+                        console.log(`Creating tile ${x} ${y} ${z}`);
+                    }
+
                     // Convert to PBF and compress before insertion
                     compressedTiles.push(
                         gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent })).then((compressed) => {
@@ -190,6 +194,11 @@ export default async function (options) {
                                 db.run(
                                     'INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES(?, ?, ?, ?)',
                                     z, x, zoomDimension - 1 - y, compressed));
+
+                            if (options.log) {
+                                console.log(`Tile ${x} ${y} ${z} created`);
+                            }
+
                             return Promise.resolve();
                         })
                     );
