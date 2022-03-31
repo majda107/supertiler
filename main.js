@@ -185,22 +185,26 @@ export default async function (options) {
 
                     // Convert to PBF and compress before insertion
                     compressedTiles.push(
-                        gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent })).then((compressed) => {
-                            if (compressed.length > 500000) {
-                                // return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
-                                console.log(`Warning, compressed length exceeded 500000! (${compressed.length})`);
-                            }
-                            statements.push(
-                                db.run(
-                                    'INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES(?, ?, ?, ?)',
-                                    z, x, zoomDimension - 1 - y, compressed));
+                        () => {
+                            console.log(`Tile ${x} ${y} ${z} gziped`);
 
-                            if (options.logPerformance) {
-                                console.log(`Tile ${x} ${y} ${z} created`);
-                            }
+                            return gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent })).then((compressed) => {
+                                if (compressed.length > 500000) {
+                                    // return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
+                                    console.log(`Warning, compressed length exceeded 500000! (${compressed.length})`);
+                                }
+                                statements.push(
+                                    db.run(
+                                        'INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES(?, ?, ?, ?)',
+                                        z, x, zoomDimension - 1 - y, compressed));
 
-                            return Promise.resolve();
-                        })
+                                if (options.logPerformance) {
+                                    console.log(`Tile ${x} ${y} ${z} createdA`);
+                                }
+
+                                return Promise.resolve();
+                            });
+                        }
                     );
                 }
             }
@@ -218,11 +222,18 @@ export default async function (options) {
         statements.push(
             db.run('INSERT INTO metadata (name, value) VALUES ("json", ?)', JSON.stringify(vectorJson)));
 
-        return Promise.all(compressedTiles).then(() => Promise.all(statements).then(() => {
-            // TODO include stats?
+        return Promise.all(compressedTiles).then(() => {
+
             if (options.logPerformance) {
-                console.log(`Finished generating MBTiles at ${performance.now()}.`);
+                console.log("Finished saving all compressed tiles.");
             }
-        }));
+
+            return Promise.all(statements).then(() => {
+                // TODO include stats?
+                if (options.logPerformance) {
+                    console.log(`Finished generating MBTiles at ${performance.now()}.`);
+                }
+            })
+        });
     }));
 }
