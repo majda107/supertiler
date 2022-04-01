@@ -67,7 +67,8 @@ const defaultOptions = {
 
     minPoints: 2,
 
-    readByLine: false
+    readByLine: false,
+    gzipSynchronously: false
 };
 
 function extend(dest, src) {
@@ -107,7 +108,7 @@ export default async function (options) {
     return Sqlite.open(options.output, { Promise }).then(db => Promise.all([
         db.run('CREATE TABLE metadata (name text, value text)'),
         db.run('CREATE TABLE tiles (zoom_level integer, tile_column integer, tile_row integer, tile_data blob)')
-    ]).then(() => {
+    ]).then(async () => {
         // Build metadata table
         db.run('INSERT INTO metadata (name, value) VALUES ("name", ?)', options.output);
         db.run('INSERT INTO metadata (name, value) VALUES ("format", "pbf")');
@@ -184,28 +185,30 @@ export default async function (options) {
                     }
 
                     // Convert to PBF and compress before insertion
-                    compressedTiles.push(
-                        () => {
-                            console.log(`Tile ${x} ${y} ${z} gziped`);
+                    // compressedTiles.push(
+                    const compressionWorker = (async () => {
+                        const compressed = await gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent }));
 
-                            return gzip(VTpbf.fromGeojsonVt(layerObject, { version: options.tileSpecVersion, extent: options.extent })).then((compressed) => {
-                                if (compressed.length > 500000) {
-                                    // return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
-                                    console.log(`Warning, compressed length exceeded 500000! (${compressed.length})`);
-                                }
-                                statements.push(
-                                    db.run(
-                                        'INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES(?, ?, ?, ?)',
-                                        z, x, zoomDimension - 1 - y, compressed));
-
-                                if (options.logPerformance) {
-                                    console.log(`Tile ${x} ${y} ${z} createdA`);
-                                }
-
-                                return Promise.resolve();
-                            });
+                        if (compressed.length > 500000) {
+                            // return Promise.reject(new Error(`Tile z:${z}, x:${x}, y:${y} greater than 500KB compressed. Try increasing radius or max zoom, or try including fewer cluster properties.`));
+                            console.log(`Warning, compressed length exceeded 500000! (${compressed.length})`);
                         }
-                    );
+                        statements.push(
+                            db.run(
+                                'INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES(?, ?, ?, ?)',
+                                z, x, zoomDimension - 1 - y, compressed));
+
+                        if (options.logPerformance) {
+                            console.log(`Tile ${x} ${y} ${z} createdA | remaining ${compressedTiles.length}`);
+                        }
+                    })();
+                    // );
+
+                    if (options.gzipSynchronously) {
+                        await compressionWorker;
+                    } else {
+                        compressedTiles.push(compressionWorker);
+                    }
                 }
             }
         }
