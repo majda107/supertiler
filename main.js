@@ -180,7 +180,7 @@ export default async function (options) {
                         tile.features.push(...mappedFeatures);
                     }
 
-                    if (options.logPerformance) {
+                    if (options.logPerformance && !options.gzipSynchronously) {
                         console.log(`Creating tile ${x} ${y} ${z}`);
                     }
 
@@ -198,8 +198,8 @@ export default async function (options) {
                                 'INSERT INTO tiles (zoom_level, tile_column, tile_row, tile_data) VALUES(?, ?, ?, ?)',
                                 z, x, zoomDimension - 1 - y, compressed));
 
-                        if (options.logPerformance) {
-                            console.log(`Tile ${x} ${y} ${z} createdA | remaining ${compressedTiles.length}`);
+                        if (options.logPerformance && options.gzipSynchronously) {
+                            console.log(`[${z}] Tile ${x} ${y} ${z} created`);
                         }
                     })();
                     // );
